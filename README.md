@@ -95,7 +95,8 @@ names the failing `trap<N>()`, and `probe.py` reads either.
 - `probe.py`: the prober, about 140 lines. Instruments the header into a
   scratch directory, runs the rounds with up to `--jobs` interleaved
   batches compiled in parallel, and probes each test file in turn,
-  arming only what the earlier ones left uncovered.
+  arming only what the earlier ones left uncovered. `--lcov-output`
+  also writes the result as an LCOV trace.
 
 `run.sh` runs both; `post.md` is the article explaining the technique and
 why arming many traps in one compile is sound; `NOTES.md` records how the

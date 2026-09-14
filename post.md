@@ -189,6 +189,6 @@ mangle_test.cc round 4: 4 armed in 4 batches, 0 hit
 8/12 probe points evaluated
 ```
 
-Round one now finds five points, not two. The two function entries are in different batches from the points behind them, so they no longer mask them, and the run settles in four rounds instead of seven. The script also takes several test files and probes them in the order given, arming for each only what the earlier ones left uncovered, which is the cheapest-first trick from above.
+Round one now finds five points, not two. The two function entries are in different batches from the points behind them, so they no longer mask them, and the run settles in four rounds instead of seven. The script also takes several test files and probes them in the order given, arming for each only what the earlier ones left uncovered, which is the cheapest-first trick from above. And `--lcov-output` writes the result as an LCOV trace, one line record per probe point, so it can go through `genhtml` or up to a coverage service alongside the runtime data. The two merge cleanly because they are disjoint: gcov reports nothing for the lines the probe reports on.
 
 *[Code listings: `basic_trap_demo/` and `advanced_probe_demo/` in the repository.]*

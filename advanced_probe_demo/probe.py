@@ -2,7 +2,8 @@
 """
 Consteval coverage by compile-time trap probing, in batched, parallel rounds.
 
-Usage: probe.py [--jobs N] [--compiler CXX] <header> <test file>...
+Usage: probe.py [--jobs N] [--compiler CXX] [--lcov-output FILE]
+                <header> <test file>...
 
 The header is instrumented into a scratch directory (see instrument.py),
 and every trap in that copy is a probe point. Each round arms every probe
@@ -14,6 +15,9 @@ same constant evaluation is masked this round and surfaces in a later one,
 once the earlier trap is disarmed. Rounds stop when one finds nothing new.
 With several test files, each is probed in turn and arms only what the
 earlier ones left uncovered, so list them cheapest to compile first.
+`--lcov-output` also writes the result as an LCOV trace, one DA line per
+probe point, which merges with runtime gcov data: the two are disjoint,
+since gcov reports nothing for consteval lines.
 """
 
 import argparse
@@ -105,10 +109,19 @@ def probe(compiler: str, work: Path, unit: str, candidates: set[int], jobs: int)
     return covered
 
 
+def write_lcov(path: Path, header: Path, points: list[int], covered: set[int]) -> None:
+    """Write an LCOV trace with one DA (line data) record per probe point."""
+    records = ["TN:consteval", f"SF:{header}"]
+    records += [f"DA:{line},{int(line in covered)}" for line in points]
+    records += [f"LH:{len(covered)}", f"LF:{len(points)}", "end_of_record"]
+    path.write_text("\n".join(records) + "\n")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[1])
     parser.add_argument("--jobs", type=int, default=1, help="compiles per round")
     parser.add_argument("--compiler", default="g++")
+    parser.add_argument("--lcov-output", type=Path, help="also write an LCOV trace here")
     parser.add_argument("header", type=Path)
     parser.add_argument("units", nargs="+", type=Path, metavar="test-file")
     arguments = parser.parse_args()
@@ -132,6 +145,9 @@ def main() -> None:
         mark = "covered  " if line in covered else "UNCOVERED"
         print(f"  {mark} {arguments.header.name}:{line:<3} {lines[line - 1].strip()}")
     print(f"{len(covered)}/{len(points)} probe points evaluated")
+    if arguments.lcov_output:
+        write_lcov(arguments.lcov_output, arguments.header, points, covered)
+        print(f"LCOV trace written to {arguments.lcov_output}")
 
 
 if __name__ == "__main__":
