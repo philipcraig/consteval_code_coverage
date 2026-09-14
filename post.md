@@ -46,7 +46,7 @@ template <long Line> constexpr void trap() {
 }  // namespace probe
 ```
 
-And here is what an instrumented function looks like. The instrumenter only ever inserts text within a line, so line numbers in the copy match the original, and `__LINE__` is the key:
+And here is what an instrumented function looks like, with the traps spread onto their own lines so you can see them. The real instrumenter only ever inserts text within a line, so line numbers in the copy match the original, and `__LINE__` is the key:
 
 ```cpp
 consteval digits mangle_decimal(long long value) {
@@ -123,7 +123,7 @@ A branch of `if constexpr` that no instantiation includes reports as unevaluated
 
 If the compiler stops after a fixed number of errors, a round can under-report. GCC's default is no limit; if you have `-fmax-errors` in your flags, take it out for the probe compiles. Under-reporting within a round is harmless anyway, since the next round picks up what was missed, but a hard stop before the first evaluation would look like "nothing new" and end the run early. The bug-detection rule catches that case, because such a compile fails with no trap fired.
 
-And the instrumenter is the part you have to write for your own code. Mine is a few hundred lines of Python that tracks strings, comments, brace depth and `consteval` regions, and inserts a trap at every block entry and before every `return` and `throw`. It is a scanner, not a parser, and it works because clang-format keeps the source regular. A tool built on libclang would be more general.
+And the instrumenter is the part you have to write for your own code. Mine is a few hundred lines of Python that tracks strings, comments, brace depth and `consteval` regions, and inserts a trap at every block entry and before every `return` and `throw`. It is a scanner, not a parser, and it works because clang-format keeps the source regular. A cut-down version, enough for the header in the demonstration below, is in the repository. A tool built on libclang would be more general.
 
 ## The road not taken
 
@@ -133,7 +133,9 @@ Class template instantiation is memoised per translation unit, and a class templ
 
 ## Try it
 
-Below is a complete demonstration: a small `consteval` name-mangler with hand-placed traps, a test file that deliberately leaves two branches untested, and a 70-line probe script that runs the rounds and prints what the tests missed. It needs Python 3 and any of GCC 15, GCC 16 or a recent Clang.
+The repository has two demonstrations. Both need Python 3 and any of GCC 15, GCC 16 or a recent Clang.
+
+The first, `basic_trap_demo`, shows the mechanism with nothing in the way: a small `consteval` name-mangler with hand-placed traps, a test file that deliberately leaves two branches untested, and a 70-line probe script that runs the rounds, one compile each, and prints what the tests missed.
 
 ```
 $ python3 probe.py mangle.hh mangle_test.cc g++
@@ -157,4 +159,36 @@ round 7: 4 armed, 0 hit
 
 Read the rounds from the top. Round one finds the two function entries and nothing else, because every other trap sits behind one of them. Round two, with the entries disarmed, gets one step further into each function. Seven rounds later, the zero branch and the division-by-zero throw are the only points left, and the report says so. Add `static_assert(view(mangle_decimal(0)) == "0")` to the test file and run it again.
 
-*[Code listing: `mangle.hh`, `mangle_test.cc`, `probe.py`. See the demo directory.]*
+The second, `advanced_probe_demo`, is the same mangler and the same tests with the tooling the rest of this post describes. Its header has no traps in it. `instrument.py` is the scanner, cut down to 180 lines, and it puts the same twelve traps into a copy of the header in a scratch directory, each on its original line:
+
+```
+$ python3 instrument.py mangle.hh | grep -n 'probe::trap'
+14:consteval digits mangle_decimal(long long value) { probe::trap<__LINE__>();
+16:  if (value == 0) { probe::trap<__LINE__>();
+18:    { probe::trap<__LINE__>(); return out; }
+20:  if (value < 0) { probe::trap<__LINE__>();
+...
+```
+
+`probe.py` runs the rounds on that copy. Without `--jobs` it reproduces the seven rounds above from the clean header. With `--jobs 4` it splits each round's armed set into four striped batches and compiles them in parallel:
+
+```
+$ python3 probe.py --jobs 4 mangle.hh mangle_test.cc
+12 probe points in mangle.hh
+mangle_test.cc round 1: 12 armed in 4 batches, 5 hit
+mangle_test.cc round 2: 7 armed in 4 batches, 2 hit
+mangle_test.cc round 3: 5 armed in 4 batches, 1 hit
+mangle_test.cc round 4: 4 armed in 4 batches, 0 hit
+  covered   mangle.hh:14  consteval digits mangle_decimal(long long value) {
+  UNCOVERED mangle.hh:16  if (value == 0) {
+  UNCOVERED mangle.hh:18  return out;
+  ...
+  UNCOVERED mangle.hh:37  if (denominator == 0) {
+  UNCOVERED mangle.hh:38  throw "division by zero in mangle_ratio";
+  ...
+8/12 probe points evaluated
+```
+
+Round one now finds five points, not two. The two function entries are in different batches from the points behind them, so they no longer mask them, and the run settles in four rounds instead of seven. The script also takes several test files and probes them in the order given, arming for each only what the earlier ones left uncovered, which is the cheapest-first trick from above.
+
+*[Code listings: `basic_trap_demo/` and `advanced_probe_demo/` in the repository.]*

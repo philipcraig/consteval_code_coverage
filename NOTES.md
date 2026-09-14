@@ -5,8 +5,8 @@
 - `post.md`: the article, about 2,450 words, first person. Its last section
   points at the listings in `demo/`; paste them as code blocks there, or
   link this repository.
-- `demo/`: the runnable example the last section shows; `run.sh` at the
-  root runs it.
+- `basic_trap_demo/` and `advanced_probe_demo/`: the two runnable examples
+  the last section shows; `run.sh` at the root runs both.
 - To render the post for pasting into an editor:
   `uv run --no-project --with markdown python -c "import markdown,sys;
   print(markdown.markdown(sys.stdin.read(), extensions=['fenced_code']))"
@@ -17,7 +17,9 @@
 
 - The demo output in the post is real: GCC 15.2 (stock Ubuntu), GCC 17
   trunk (20260816) and a clang-p2996 build all give 8/12 in 7 rounds with
-  the same four uncovered points.
+  the same four uncovered points. The advanced demo gives the same 7 rounds
+  serially and 4 rounds with `--jobs 4` on GCC 15.2, GCC 16 trunk
+  (20260322) and clang-p2996 (2026-09-14).
 - On GCC 15 and Clang the throw is "not a constant expression" rather than
   an uncaught exception; the script reads the trap key from the note chain
   in that case. Constexpr exceptions (P3068) are GCC 16+.
