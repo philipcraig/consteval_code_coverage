@@ -1,6 +1,6 @@
 # Consteval code coverage
 
-Runtime coverage tools cannot see `consteval` code, because it never runs.
+runtime code-coverage tools cannot see `consteval` code, because it never runs.
 This repository shows a technique that measures it anyway: instrument the
 compile-time code with traps that throw during constant evaluation when
 armed, arm every untested trap at once, read the compiler's error output
@@ -100,4 +100,4 @@ names the failing `trap<N>()`, and `probe.py` reads either.
 
 `run.sh` runs both; `post.md` is the article explaining the technique and
 why arming many traps in one compile is sound; `NOTES.md` records how the
-numbers in the post were measured, and publishing notes.
+numbers in the post were measured.
