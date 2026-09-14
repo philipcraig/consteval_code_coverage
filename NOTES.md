@@ -38,18 +38,8 @@
 | two cheapest test files settle ~60 % of points | 107/177 |
 | 177 points in 23 rounds | 4-core run |
 
-## Getting it into Substack
 
-1. Render `post.md` to HTML as above, open it in a browser, select all,
-   copy.
-2. On substack.com, New post, click into the body and paste. Cut the first
-   heading and put it in the title field.
-3. Add a subtitle (see below), then Preview → email/web, and Share → Send
-   test email to yourself. It stays a draft until you press Publish.
-4. If a code block pasted as plain paragraphs, use the + menu → Code block
-   and paste the text in.
-
-## Things to decide
+## Publishing ideas / open items
 
 - Credit: the batched-round idea and the template-argument trick came from
   a collaborator's prototype. Name Jonathan Coe if he is happy with that;
